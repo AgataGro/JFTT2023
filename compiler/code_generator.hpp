@@ -14,8 +14,8 @@ class CodeFormater;
 class CodeBlock {
 public:
     std::string name="";
-    int start_index = 0;
-    int exit_index = 0;
+    long long start_index = 0;
+    long long exit_index = 0;
     std::vector<CodeBlock *> body;
     CodeBlock() = default;
     virtual ~CodeBlock() = default;
@@ -25,9 +25,9 @@ public:
 
 class CodeSimple : public CodeBlock{
 public:
-    int* jump;
+    long long* jump;
     std::string command;
-    CodeSimple(std::string c, int *j);
+    CodeSimple(std::string c, long long *j);
     ~CodeSimple() = default;
 };
 
@@ -38,7 +38,7 @@ public:
     CodeBlock *currentBlock;
     ParentBlock *parent = nullptr;
     std::string usable_reg = "";
-    int k=1;
+    long long k=1;
     bool checkmain = true;
     CodeGenerator(Intermediate* i);
     ~CodeGenerator() = default;

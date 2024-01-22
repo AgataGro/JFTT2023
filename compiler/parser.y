@@ -305,7 +305,6 @@ int main(int argc, char** argv) {
     yyparse();
     SemanticAnalyser* visitor = new SemanticAnalyser();
     root->accept(visitor);
-    visitor->intermediate_form->print(0);
     CodeGenerator* cg = new CodeGenerator(visitor->intermediate_form);
     cg->visit(cg->itermediate_form);
     CodeFormater* cf = new CodeFormater(cg->end_result);

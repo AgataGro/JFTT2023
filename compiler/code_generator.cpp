@@ -8,7 +8,7 @@
 
 int level=0;
 
-CodeSimple::CodeSimple(std::string c, int* j) {
+CodeSimple::CodeSimple(std::string c, long long* j) {
     command = c;
     jump = j;
 } 
@@ -26,11 +26,12 @@ CodeGenerator::CodeGenerator(Intermediate* i) {
 }
 
 void CodeGenerator::setLocation(Variable* var, std::string reg) {
-    int value = 0;
+    long long value = 0;
+    long long stored_value = 0;
     if (var->isMemoryReference==false){
         if(var->offset!=nullptr) {
             if(var->offset->isValue==true) {
-                int mem = var->memoryLocation + var->offset->memoryLocation;
+                long long mem = var->memoryLocation + var->offset->memoryLocation;
                 currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
                 value = 0;
                 k++;
@@ -39,19 +40,38 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
                     value = 1;
                     k++;
                 }
-                while (value!=mem) {
-                    if(value*2<=mem) {
+                while ((value+stored_value)!=mem) {
+                    if((value*2+stored_value)<=mem) {
                         currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
                         value = value * 2;
                         k++;
-                    } else if (value + 1 <= mem) {
-                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                        value += 1;
+                    } else if (value + stored_value <= mem) {
+                        currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
                         k++;
+                        if (stored_value!=0){
+                            currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                            k++;
+                        }
+                        currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                        k++;
+                        stored_value += value;
+                        value = 1;
                     }
+                }
+                if(stored_value!=0) {
+                    currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
+                    k++;
                 }
             } else {
-                int mem = var->offset->memoryLocation;
+                long long mem = var->memoryLocation;
                 currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
                 value = 0;
                 k++;
@@ -60,70 +80,139 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
                     value = 1;
                     k++;
                 }
-                while (value!=mem) {
-                    if(value*2<=mem) {
+                while ((value+stored_value)!=mem) {
+                    if((value*2+stored_value)<=mem) {
                         currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
                         value = value * 2;
                         k++;
-                    } else if (value + 1 <= mem) {
+                    } else if (value + stored_value <= mem) {
+                        currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                        k++;
+                        if (stored_value!=0){
+                            currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                            k++;
+                        }
+                        currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                        k++;
                         currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                        value += 1;
+                        k++;
+                        stored_value += value;
+                        value = 1;
+                    }
+                }
+                if(stored_value!=0) {
+                    currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
+                    k++;
+                }
+                currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                k++;
+                currentBlock->addCodeBlock(new CodeSimple("PUT f", nullptr));
+                k++;
+                if(var->offset->isMemoryReference==true){
+                    setLocation(var->offset, reg);
+                } else {
+                    mem = var->offset->memoryLocation;
+                    currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                    value = 0;
+                    stored_value = 0;
+                    k++;
+                    if(mem != 0) {
+                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                        value = 1;
+                        k++;
+                    }
+                    while ((value+stored_value)!=mem) {
+                        if((value*2+stored_value)<=mem) {
+                            currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
+                            value = value * 2;
+                            k++;
+                        } else if (value + stored_value <= mem) {
+                            currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                            k++;
+                            if (stored_value!=0){
+                                currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                                k++;
+                            }
+                            currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                            k++;
+                            currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                            k++;
+                            currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                            k++;
+                            stored_value += value;
+                            value = 1;
+                        }
+                    }
+                    if(stored_value!=0) {
+                        currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
                         k++;
                     }
                 }
+                
                 currentBlock->addCodeBlock(new CodeSimple("LOAD " + reg, nullptr));
                 k++;
-                mem = var->memoryLocation;
-                currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
-                value = 0;
+                currentBlock->addCodeBlock(new CodeSimple("ADD f ", nullptr));
                 k++;
-                if(mem != 0) {
-                    currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                    value = 1;
-                    k++;
-                }
-                while (value!=mem) {
-                    if(value*2<=mem) {
-                        currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
-                        value = value * 2;
-                        k++;
-                    } else if (value + 1 <= mem) {
-                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                        value += 1;
-                        k++;
-                    }
-                }
-                currentBlock->addCodeBlock(new CodeSimple("ADD " + reg, nullptr));
-                k++;
-                currentBlock->addCodeBlock(new CodeSimple("PUT "+ reg, nullptr));
+                currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
                 k++;
             }
         } else {
-            int mem = var->memoryLocation;
+            long long mem = var->memoryLocation;
             currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
             value = 0;
+            k++;
+            currentBlock->addCodeBlock(new CodeSimple("RST g", nullptr));
             k++;
             if(mem != 0) {
                 currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
                 value = 1;
                 k++;
             }
-            while (value!=mem) {
-                if(value*2<=mem) {
+            while ((value+stored_value)!=mem) {
+                if((value*2+stored_value)<=mem) {
                     currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
                     value = value * 2;
                     k++;
-                } else if (value + 1 <= mem) {
-                    currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                    value += 1;
+                } else if (value + stored_value <= mem) {
+                    currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
                     k++;
+                    if (stored_value!=0){
+                        currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                        k++;
+                    }
+                    currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                    k++;
+                    stored_value += value;
+                    value = 1;
                 }
+            }
+            if(stored_value!=0) {
+                currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                k++;
+                currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                k++;
+                currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
+                k++;
             }
         }
     } else {
         if(var->offset!=nullptr) {
             if(var->offset->isValue==true) {
-                int mem = var->memoryLocation;
+                long long mem = var->memoryLocation;
                 currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
                 value = 0;
                 k++;
@@ -132,16 +221,35 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
                     value = 1;
                     k++;
                 }
-                while (value!=mem) {
-                    if(value*2<=mem) {
+                while ((value+stored_value)!=mem) {
+                    if((value*2+stored_value)<=mem) {
                         currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
                         value = value * 2;
                         k++;
-                    } else if (value + 1 <= mem) {
-                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                        value += 1;
+                    } else if (value + stored_value <= mem) {
+                        currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
                         k++;
+                        if (stored_value!=0){
+                            currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                            k++;
+                        }
+                        currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                        k++;
+                        stored_value += value;
+                        value = 1;
                     }
+                }
+                if(stored_value!=0) {
+                    currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
+                    k++;
                 }
                 currentBlock->addCodeBlock(new CodeSimple("LOAD " + reg, nullptr));
                 k++;
@@ -150,22 +258,42 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
                 mem = var->offset->memoryLocation;
                 currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
                 value = 0;
+                stored_value = 0;
                 k++;
                 if(mem != 0) {
                     currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
                     value = 1;
                     k++;
                 }
-                while (value!=mem) {
-                    if(value*2<=mem) {
+                while ((value+stored_value)!=mem) {
+                    if((value*2+stored_value)<=mem) {
                         currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
                         value = value * 2;
                         k++;
-                    } else if (value + 1 <= mem) {
-                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                        value += 1;
+                    } else if (value + stored_value <= mem) {
+                        currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
                         k++;
+                        if (stored_value!=0){
+                            currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                            k++;
+                        }
+                        currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                        k++;
+                        stored_value += value;
+                        value = 1;
                     }
+                }
+                if(stored_value!=0) {
+                    currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
+                    k++;
                 }
                 currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
                 k++;
@@ -174,7 +302,7 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
                 currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
                 k++;
             } else {
-                int mem = var->memoryLocation;
+                long long mem = var->memoryLocation;
                 currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
                 value = 0;
                 k++;
@@ -183,41 +311,85 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
                     value = 1;
                     k++;
                 }
-                while (value!=mem) {
-                    if(value*2<=mem) {
+                while ((value+stored_value)!=mem) {
+                    if((value*2+stored_value)<=mem) {
                         currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
                         value = value * 2;
                         k++;
-                    } else if (value + 1 <= mem) {
-                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                        value += 1;
+                    } else if (value + stored_value <= mem) {
+                        currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
                         k++;
+                        if (stored_value!=0){
+                            currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                            k++;
+                        }
+                        currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                        k++;
+                        stored_value += value;
+                        value = 1;
                     }
+                }
+                if(stored_value!=0) {
+                    currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
+                    k++;
                 }
                 currentBlock->addCodeBlock(new CodeSimple("LOAD " + reg, nullptr));
                 k++;
                 currentBlock->addCodeBlock(new CodeSimple("PUT f", nullptr));
                 k++;
-                mem = var->offset->memoryLocation;
-                currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
-                value = 0;
-                k++;
-                if(mem != 0) {
-                    currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                    value = 1;
+                if(var->offset->isMemoryReference==true){
+                    setLocation(var->offset, reg);
+                } else {
+                    mem = var->offset->memoryLocation;
+                    currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                    value = 0;
+                    stored_value = 0;
                     k++;
-                }
-                while (value!=mem) {
-                    if(value*2<=mem) {
-                        currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
-                        value = value * 2;
-                        k++;
-                    } else if (value + 1 <= mem) {
+                    if(mem != 0) {
                         currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                        value += 1;
+                        value = 1;
+                        k++;
+                    }
+                    while ((value+stored_value)!=mem) {
+                        if((value*2+stored_value)<=mem) {
+                            currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
+                            value = value * 2;
+                            k++;
+                        } else if (value + stored_value <= mem) {
+                            currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                            k++;
+                            if (stored_value!=0){
+                                currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                                k++;
+                            }
+                            currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                            k++;
+                            currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                            k++;
+                            currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                            k++;
+                            stored_value += value;
+                            value = 1;
+                        }
+                    }
+                    if(stored_value!=0) {
+                        currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                        k++;
+                        currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
                         k++;
                     }
                 }
+                
                 currentBlock->addCodeBlock(new CodeSimple("LOAD " + reg, nullptr));
                 k++;
                 currentBlock->addCodeBlock(new CodeSimple("ADD f ", nullptr));
@@ -226,7 +398,7 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
                 k++;
             }
         } else {
-            int mem = var->memoryLocation;
+            long long mem = var->memoryLocation;
             currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
             value = 0;
             k++;
@@ -235,16 +407,35 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
                 value = 1;
                 k++;
             }
-            while (value!=mem) {
-                if(value*2<=mem) {
+            while ((value+stored_value)!=mem) {
+                if((value*2+stored_value)<=mem) {
                     currentBlock->addCodeBlock(new CodeSimple("SHL " + reg, nullptr));
                     value = value * 2;
                     k++;
-                } else if (value + 1 <= mem) {
-                    currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
-                    value += 1;
+                } else if (value + stored_value <= mem) {
+                    currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
                     k++;
+                    if (stored_value!=0){
+                        currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                        k++;
+                    }
+                    currentBlock->addCodeBlock(new CodeSimple("PUT g", nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
+                    k++;
+                    currentBlock->addCodeBlock(new CodeSimple("INC " + reg, nullptr));
+                    k++;
+                    stored_value += value;
+                    value = 1;
                 }
+            }
+            if(stored_value!=0) {
+                currentBlock->addCodeBlock(new CodeSimple("GET " + reg, nullptr));
+                k++;
+                currentBlock->addCodeBlock(new CodeSimple("ADD g", nullptr));
+                k++;
+                currentBlock->addCodeBlock(new CodeSimple("PUT " + reg, nullptr));
+                k++;
             }
             currentBlock->addCodeBlock(new CodeSimple("LOAD " + reg, nullptr));
             k++;
@@ -256,11 +447,11 @@ void CodeGenerator::setLocation(Variable* var, std::string reg) {
 }
 
 void CodeGenerator::setARGLocation(Variable* var, std::string reg) {
-    int value = 0;
+    long long value = 0;
     
     if(var->offset!=nullptr) {
         if(var->offset->isValue==true) {
-            int mem = var->memoryLocation + var->offset->memoryLocation;
+            long long mem = var->memoryLocation + var->offset->memoryLocation;
             currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
             value = 0;
             k++;
@@ -281,7 +472,7 @@ void CodeGenerator::setARGLocation(Variable* var, std::string reg) {
                 }
             }
         } else {
-            int mem = var->offset->memoryLocation;
+            long long mem = var->offset->memoryLocation;
             currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
             value = 0;
             k++;
@@ -329,7 +520,7 @@ void CodeGenerator::setARGLocation(Variable* var, std::string reg) {
             k++;
         }
     } else {
-        int mem = var->memoryLocation;
+        long long mem = var->memoryLocation;
         currentBlock->addCodeBlock(new CodeSimple("RST " + reg, nullptr));
         value = 0;
         k++;
@@ -361,21 +552,12 @@ void CodeGenerator::visit(ValueCommand* node) {
         currentBlock->addCodeBlock(new CodeSimple("PUT "+ usable_reg, nullptr));
         k++;
     }  
-    std::string indent(level * 4, ' ');
-    std::cout <<indent<< "SET " << node->val->name << " mem: " << node->val->memoryLocation << std::endl;    
+    std::string indent(level * 4, ' ');  
 }
 
 void CodeGenerator::visit(AddCommand* node) {
     std::string indent(level * 4, ' ');
     
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
     setLocation(node->right, "c");
     if (node->right->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD c", nullptr));
@@ -396,20 +578,12 @@ void CodeGenerator::visit(AddCommand* node) {
     k++;
     currentBlock->addCodeBlock(new CodeSimple("PUT c", nullptr));
     k++;
-    std::cout <<indent<< "ADD" << std::endl;
+
 }
 
 void CodeGenerator::visit(SubCommand* node) {
     std::string indent(level * 4, ' ');
     
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
     setLocation(node->right, "c");
     if (node->right->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD c", nullptr));
@@ -430,20 +604,12 @@ void CodeGenerator::visit(SubCommand* node) {
     k++;
     currentBlock->addCodeBlock(new CodeSimple("PUT c", nullptr));
     k++;
-    std::cout <<indent<< "SUB" << std::endl;
+
 }
 
 void CodeGenerator::visit(MulCommand* node) {
     std::string indent(level * 4, ' ');
     
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
     setLocation(node->left, "b");
     if (node->left->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD b", nullptr));
@@ -468,7 +634,7 @@ void CodeGenerator::visit(MulCommand* node) {
     
     currentBlock->addCodeBlock(new CodeSimple("RST c", nullptr));
     k++;
-    int ret = k;
+    long long ret = k;
     currentBlock->addCodeBlock(new CodeSimple("GET d", nullptr));
     k++;
     currentBlock->addCodeBlock(new CodeSimple("JZERO "+std::to_string(k+12), nullptr));//end
@@ -498,20 +664,12 @@ void CodeGenerator::visit(MulCommand* node) {
     k++;
     currentBlock->addCodeBlock(new CodeSimple("GET c", nullptr));
     k++;
-    std::cout <<indent<< "MUL" << std::endl;
+
 }
 
 void CodeGenerator::visit(DivCommand* node) {
     std::string indent(level * 4, ' ');
-    
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
+
     setLocation(node->left, "b");
     if (node->left->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD b", nullptr));
@@ -551,14 +709,14 @@ void CodeGenerator::visit(DivCommand* node) {
     k++;
     currentBlock->addCodeBlock(new CodeSimple("JZERO "+std::to_string(k+28), nullptr));//check
     k++;
-    int ret = k;
+    long long ret = k;
     currentBlock->addCodeBlock(new CodeSimple("GET d", nullptr));
     k++;
     currentBlock->addCodeBlock(new CodeSimple("PUT e", nullptr));
     k++;
     currentBlock->addCodeBlock(new CodeSimple("RST g", nullptr));
     k++;
-    int ret2 = k;
+    long long ret2 = k;
     currentBlock->addCodeBlock(new CodeSimple("SHL e", nullptr));
     k++;
     currentBlock->addCodeBlock(new CodeSimple("INC g", nullptr));
@@ -579,7 +737,7 @@ void CodeGenerator::visit(DivCommand* node) {
     k++;
     currentBlock->addCodeBlock(new CodeSimple("INC h", nullptr));
     k++;
-    int q = k;
+    long long q = k;
     currentBlock->addCodeBlock(new CodeSimple("GET g", nullptr));
     k++;
     currentBlock->addCodeBlock(new CodeSimple("JZERO "+std::to_string(k+4), nullptr));
@@ -613,20 +771,12 @@ void CodeGenerator::visit(DivCommand* node) {
     k++;
     currentBlock->addCodeBlock(new CodeSimple("PUT c", nullptr));
     k++;
-    std::cout <<indent<< "DIV" << std::endl;
+
 }
 
 void CodeGenerator::visit(ModCommand* node) {
     std::string indent(level * 4, ' ');
-    
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
+
     setLocation(node->left, "b");
     if (node->left->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD b", nullptr));
@@ -663,12 +813,12 @@ void CodeGenerator::visit(ModCommand* node) {
     k++;
     currentBlock->addCodeBlock(new CodeSimple("JZERO "+std::to_string(k+15), nullptr));//check
     k++;
-    int ret = k;
+    long long ret = k;
     currentBlock->addCodeBlock(new CodeSimple("GET d", nullptr));
     k++;
     currentBlock->addCodeBlock(new CodeSimple("PUT e", nullptr));
     k++;
-    int ret2 = k;
+    long long ret2 = k;
     currentBlock->addCodeBlock(new CodeSimple("SHL e", nullptr));
     k++;
     currentBlock->addCodeBlock(new CodeSimple("GET c", nullptr));
@@ -696,20 +846,11 @@ void CodeGenerator::visit(ModCommand* node) {
     k++;
     currentBlock->addCodeBlock(new CodeSimple("GET c", nullptr));
     k++;
-    std::cout <<indent<< "MOD" << std::endl;
 }
 
 void CodeGenerator::visit(EQCondition* node) {
     std::string indent(level * 4, ' ');
     
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
     setLocation(node->right, "c");
     if (node->right->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD c", nullptr));
@@ -744,15 +885,6 @@ void CodeGenerator::visit(EQCondition* node) {
 
 void CodeGenerator::visit(NEQCondition* node) {
     std::string indent(level * 4, ' ');
-    
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
     setLocation(node->right, "c");
     if (node->right->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD c", nullptr));
@@ -786,16 +918,8 @@ void CodeGenerator::visit(NEQCondition* node) {
 }
 
 void CodeGenerator::visit(GEQCondition* node) {
-        std::string indent(level * 4, ' ');
-    
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
+    std::string indent(level * 4, ' ');
+
     setLocation(node->right, "c");
     if (node->right->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD c", nullptr));
@@ -823,16 +947,8 @@ void CodeGenerator::visit(GEQCondition* node) {
 }
 
 void CodeGenerator::visit(LEQCondition* node) {
-        std::string indent(level * 4, ' ');
+    std::string indent(level * 4, ' ');
     
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
     setLocation(node->left, "c");
     if (node->left->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD c", nullptr));
@@ -862,14 +978,6 @@ void CodeGenerator::visit(LEQCondition* node) {
 void CodeGenerator::visit(GTCondition* node) {
     std::string indent(level * 4, ' ');
     
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
     setLocation(node->right, "c");
     if (node->right->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD c", nullptr));
@@ -896,15 +1004,6 @@ void CodeGenerator::visit(GTCondition* node) {
 
 void CodeGenerator::visit(LTCondition* node) {
     std::string indent(level * 4, ' ');
-    
-    std::cout <<indent<< "LOAD " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "LOAD " << node->right->name << " mem: " << node->right->memoryLocation << std::endl;
-    if(node->right->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
     setLocation(node->left, "c");
     if (node->left->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD c", nullptr));
@@ -933,11 +1032,7 @@ void CodeGenerator::visit(AssignCommand* node) {
     std::string indent(level * 4, ' ');
     usable_reg = "c";
     node->right->accept(this);
-    std::cout <<indent<< "SET TO LOCATION " << node->left->name << " mem: " << node->left->memoryLocation << std::endl;
-    if(node->left->isMemoryReference) {
-        std::cout <<indent<< "LOAD destination" << std::endl;
-    }
-    std::cout << indent << "STORE result\n";
+
     setLocation(node->left, "b");
     currentBlock->addCodeBlock(new CodeSimple("GET c", nullptr));
     k++;
@@ -947,25 +1042,17 @@ void CodeGenerator::visit(AssignCommand* node) {
 
 void CodeGenerator::visit(ReadCommand* node) {
     std::string indent(level * 4, ' ');
-    std::cout <<indent<< "SET TO LOCATION " << node->val->name << " mem: " << node->val->memoryLocation << std::endl;
-    if(node->val->isMemoryReference) {
-        std::cout <<indent<< "LOAD destination" << std::endl;
-    }
+
     setLocation(node->val, "b");
     currentBlock->addCodeBlock(new CodeSimple("READ", nullptr));
     k++;
     currentBlock->addCodeBlock(new CodeSimple("STORE b", nullptr));
     k++;
-    std::cout <<indent<< "READ\n"<<indent<< "STORE" << std::endl;
+
 }
 
 void CodeGenerator::visit(WriteCommand* node) {
     std::string indent(level * 4, ' ');
-    std::cout <<indent<< "LOAD " << node->val->name << " mem: " << node->val->memoryLocation <<" "<<node->val->isValue<< std::endl;
-    if(node->val->isMemoryReference) {
-        std::cout <<indent<< "LOAD value" << std::endl;
-    }
-    std::cout <<indent<< "WRITE" << std::endl;
     setLocation(node->val, "b");
     if (node->val->isValue==false){
         currentBlock->addCodeBlock(new CodeSimple("LOAD b", nullptr));
@@ -980,10 +1067,9 @@ void CodeGenerator::visit(WriteCommand* node) {
 
 void CodeGenerator::visit(CallCommand* node) {
     std::string indent(level * 4, ' ');
-    std::cout << indent << node->procedure_name << " commands: " << std::endl;
     std::string indent2((level + 1) * 4, ' ');
     std::vector<Variable> p_vars = node->parent->vars;
-    int skipped = 0;
+    long long skipped = 0;
     for (long unsigned int i = 0; i < p_vars.size();i++)
     {
         if (p_vars[i].name!="return index" && p_vars[i].isMemoryReference){
@@ -993,15 +1079,12 @@ void CodeGenerator::visit(CallCommand* node) {
             k++;
             currentBlock->addCodeBlock(new CodeSimple("STORE b", nullptr));
             k++;
-            std::cout <<indent2<< "SET TO LOCATION 1: " << p_vars[i].name << " mem: " << p_vars[i].memoryLocation << std::endl;
-            std::cout << indent2 << "SET TO LOCATION 2: " << node->vals[i-skipped].name << " mem: " << node->vals[i-skipped].memoryLocation<< std::endl;
-            std::cout << indent2 << "STORE 2 at 1\n";
+
         } else {
             skipped++;
         }
         
     }
-    int ret = k;
     for (long unsigned int i = 0; i < p_vars.size();i++)
     {
         if(p_vars[i].name=="return index"){
@@ -1020,8 +1103,7 @@ void CodeGenerator::visit(CallCommand* node) {
             k++;
             currentBlock->addCodeBlock(new CodeSimple("STORE b", nullptr));
             k++;
-            std::cout <<indent2<< "SET TO LOCATION" << p_vars[i].name << " mem: " << p_vars[i].memoryLocation << std::endl;
-            std::cout << indent2 << "STORE: current line + 1" << std::endl;
+
             break;
         }
        if(i==p_vars.size()-1)
@@ -1040,16 +1122,15 @@ void CodeGenerator::visit(CallCommand* node) {
 
 void CodeGenerator::visit(IfBlock* node) {
     CodeBlock *block = new CodeBlock();
-    int out=k;
+    long long out=k;
     std::string indent(level * 4, ' ');
     currentBlock = block;
-    std::cout << indent << "Condition\n";
+
     node->cond->accept(this);
     block->start_index = k;
     int current_level = level;
     level++;
-    std::cout << indent << "Then block\n";
-    std::cout <<indent<< "set code block start\n";
+
     for(const auto& v:node->thenBlock) {
         currentBlock=block;
         v->accept(this);
@@ -1058,8 +1139,7 @@ void CodeGenerator::visit(IfBlock* node) {
     block->addCodeBlock(new CodeSimple("JUMP ", &out));
     k++;
     block->exit_index = k;
-    std::cout <<indent<< "set code block end\n";
-    std::cout << indent << "Else block\n";
+
     if(node->elseBlock.empty()==false){
         for(const auto& v:node->elseBlock) {
             currentBlock=block;
@@ -1087,7 +1167,6 @@ void CodeGenerator::visit(RepeatBlock* node) {
     CodeBlock *block = new CodeBlock();
     block->exit_index = k;
     std::string indent(level * 4, ' ');
-    std::cout <<indent<< "set code block start\n";
     currentBlock = block;
     
     int current_level = level;
@@ -1100,16 +1179,14 @@ void CodeGenerator::visit(RepeatBlock* node) {
     level = current_level;
     node->cond->accept(this);
     block->start_index = k;
-    std::cout <<indent<< "set code block end\n";
     currentBlock = block;
 }
 
 void CodeGenerator::visit(WhileBlock* node) {
     CodeBlock *block = new CodeBlock();
     std::string indent(level * 4, ' ');
-    std::cout <<indent<< "set code block start\n";
     currentBlock = block;
-    int cond_indx = k;
+    long long cond_indx = k;
     node->cond->accept(this);
     block->start_index = k;
     int current_level = level;
@@ -1122,7 +1199,6 @@ void CodeGenerator::visit(WhileBlock* node) {
     block->addCodeBlock(new CodeSimple("JUMP "+std::to_string(cond_indx), nullptr));
     k++;
     block->exit_index = k;
-    std::cout <<indent<< "set code block end\n";
     level = current_level;
     currentBlock = block;
 }
@@ -1144,21 +1220,16 @@ void CodeGenerator::visit(ContentBlock* node) {
 void CodeGenerator::visit(ParentBlock* node) {
     CodeBlock *block = new CodeBlock();
     block->name = node->name;
-    std::cout << "set code block start" << std::endl;
     block->start_index = k;
     currentBlock = block;
     level = 0;
     parent = node;
     std::string indent(level * 4, ' ');
-    std::cout << node->name << std::endl;
     level++;
     std::string indent2(level * 4, ' ');
-    for (const auto& v:node->vars) {
-        std::cout << indent2 << v.name << " " << v.memoryLocation << " is arg? " << v.isMemoryReference << std::endl;
-    }
+
     level++;
     node->content->accept(this);
-    std::cout << "set code block end" << std::endl;
     block->exit_index = k;
     currentBlock = block;
     if(node->name=="main"){

@@ -7,17 +7,18 @@
 
 struct SymbolTableEntry {
     std::string name;
-    int memoryLocation;
+    long long memoryLocation;
     std::string scope;
-    int arraySize; // Use -1 for non-array variables
+    long long arraySize; // Use -1 for non-array variables
+    bool initialized = false;
 };
 
 struct ArgumentEntry
 {
     std::string name;
     std::string scope;
-    int memoryLocation;
-    bool isArray;
+    long long memoryLocation;
+    long long isArray;
 };
 
 struct InitializedArgument
@@ -26,14 +27,19 @@ struct InitializedArgument
     SymbolTableEntry s;
 };
 
+struct InitializedVariable {
+    std::string name;
+    std::string scope;
+};
 
 class SymbolTable {
 public:
     std::unordered_map<std::string, SymbolTableEntry> symbols;
     std::unordered_map<std::string, ArgumentEntry> arguments;
     std::unordered_map<std::string, InitializedArgument> initArguments;
+    std::unordered_map<std::string, InitializedVariable> initVariables;
     std::string currentScope;
-    int nextMemoryLocation;
+    long long nextMemoryLocation;
     SymbolTable();
     // Methods to add, find, and remove symbols, manage scope, etc.
 };
@@ -41,12 +47,12 @@ public:
 class Variable {
 public:
     std::string name;
-    int memoryLocation;
+    long long memoryLocation;
     Variable* offset;
     bool isValue;
     bool isMemoryReference;
     bool isArray;
-    Variable(std::string name, int memoryLocation, Variable* offset, bool isValue, bool isMemoryReference, bool isArray);
+    Variable(std::string name, long long memoryLocation, Variable* offset, bool isValue, bool isMemoryReference, bool isArray);
     ~Variable() = default;
     Variable* getOffset();
 };

@@ -10,7 +10,7 @@ SymbolTable::SymbolTable() {
     currentScope = "";
 }
 
-Variable::Variable(std::string name, int memoryLocation, Variable* offset, bool isValue, bool isMemoryReference, bool isArray) {
+Variable::Variable(std::string name, long long memoryLocation, Variable* offset, bool isValue, bool isMemoryReference, bool isArray) {
     this->name = name;
     this->memoryLocation = memoryLocation;
     this->offset = offset;
@@ -47,6 +47,7 @@ bool SemanticAnalyser::containsEntryWith(std::string scope, std::string name) {
     }
     return false;
 }
+
 
 std::vector<ArgumentEntry> SemanticAnalyser::getProcedureArguments(std::string name){
     std::vector<ArgumentEntry> args;
@@ -101,7 +102,7 @@ void SemanticAnalyser::visit(ArgumentNode* node) {
 
 void SemanticAnalyser::visit(ValueNode* node) {
     Variable *var = new Variable("value", node->value, nullptr, true, false, false);
-    ValueCommand *block = new ValueCommand(var);
+    ValueCommand *block = new ValueCommand(var);   
     ready_var = var;
     currentBlock = block;
 }
@@ -116,6 +117,9 @@ void SemanticAnalyser::visit(IdentifierNode* node) {
         if(search!=symbolTable->symbols.end()){
             Variable *access = nullptr;
             SymbolTableEntry s = search->second;
+            if(s.initialized==false) {
+                std::cout << "\x1b[31m Warning: \x1b[0m uninitialized variable "<< uniqueKey << std::endl;
+            } 
             if ( node->isArrayAccess() ) {
                 currentBlock = nullptr;
                 node->index->accept(this);
@@ -232,7 +236,10 @@ void SemanticAnalyser::visit(CommandBlockNode* node) {
         c->accept(this);
     } 
 }
-void SemanticAnalyser::visit(ReadNode* node) {
+void SemanticAnalyser::visit(ReadNode* node) {  
+    std::string uniqueKey = symbolTable->currentScope + "::" + *node->identifier->name;
+    symbolTable->symbols[uniqueKey].initialized = true;
+
     node->identifier->accept(this);
     Variable* left=ready_var;
     
@@ -283,7 +290,6 @@ void SemanticAnalyser::visit(ProcedureCallArguments* node) {
                     throw std::runtime_error("Type mismatch");
                 } else {
                     if(ready_var!=nullptr){
-                        std::cout << "Add arg: " << ready_var->name << " as " << arguments[i].name << std::endl;
                         Variable var = *ready_var;
                         derivedPtr->addArg(var);
                     }
@@ -367,9 +373,12 @@ void SemanticAnalyser::visit(IfNode* node) {
 }
 void SemanticAnalyser::visit(AssignmentNode* node) {
     AssignCommand *block;
+    std::string uniqueKey = symbolTable->currentScope + "::" + *node->identifier->name;
+    symbolTable->symbols[uniqueKey].initialized = true;
+
     node->identifier->accept(this);
     Variable* left=ready_var;
-    
+
     if (left->isArray && left->offset==nullptr){
         std::cerr << "Incorrect array access: " << " in " << symbolTable->currentScope << std::endl;
         throw std::runtime_error("Incorrect array access");
@@ -405,7 +414,7 @@ void SemanticAnalyser::visit(ArgumentsNode* node) {
 }
 void SemanticAnalyser::visit(ProcedureHeadNode* node) {
     symbolTable->currentScope = *node->name;
-    node->arguments->accept(this);
+    if(node->arguments!=nullptr) node->arguments->accept(this);
 }
 void SemanticAnalyser::visit(ProcedureNode* node) {
     ParentBlock *p;
@@ -416,8 +425,8 @@ void SemanticAnalyser::visit(ProcedureNode* node) {
         symbolTable->nextMemoryLocation += 1;
         parent = p;
         intermediate_form->addBlock(p);
-        node->arguments->accept(this);
-        node->declarations->accept(this);
+        if(node->arguments!=nullptr) node->arguments->accept(this);
+        if(node->declarations!=nullptr) node->declarations->accept(this);
     }
     if(!onlyGatherProcedureNames){
         symbolTable->currentScope = *node->arguments->name;

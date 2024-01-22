@@ -201,9 +201,9 @@ ProcedureNode::ProcedureNode(ProcedureHeadNode* args, DeclarationsNode* decl, Co
 
 void ProcedureNode::print(int level) const {
     std::cout << createIndent(level) << "Procedure: " << std::endl;
-    arguments->print(level + 1);
-    declarations->print(level + 1);
-    commands->print(level + 1);
+    if(arguments != nullptr)arguments->print(level + 1);
+    if(declarations != nullptr)declarations->print(level + 1);
+    if(commands != nullptr)commands->print(level + 1);
 
 }
 
