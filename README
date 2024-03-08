@@ -1,0 +1,45 @@
+# JFTT 2023
+
+## Autor
+
+- **Imię i nazwisko**: Agata Groszek
+- **Numer indeksu**: 268424
+
+## Overview
+
+Projekt kompilatora prostego języka imperatywnego.
+
+## Files Description
+
+### `lexer.l`
+
+- **Description**: Lexer stworzony pod gramatykę opisaną w parserze. Ignoruje komentarze.
+
+### `parser.y`
+
+- **Description**: Parser zgodny z zadaną gramatyką. Podczas analizy syntaktycznej tworzone jest AST.
+
+### `ast_nodes.hpp` and `ast_nodes.cpp`
+
+- **Opis**: Pliki definiują węzły drzewa AST (Abstract Syntax Tree). `ast_nodes.hpp` jest plikiem nagłówkowym zawierającym definicje, a `ast_nodes.cpp` zawiera implementację.
+
+### `semantic_analyser.hpp` and `semantic_analyser.cpp`
+
+- **Opis**: Pliki odpowiedzialne za analizę semantyczną (przejście po AST), wykrywanie błędów i generowanie postaci pośredniej.
+
+### `code_generator.hpp` and `code_generator.cpp`
+
+- **Opis**: W tych plikach na podstawie postaci pośredniej generowany jest kod maszyny wirtualnej.
+
+### `io_handler.hpp` and `io_handler.cpp`
+
+- **Opis**: Pliki zajmują się operacja I/O na zadanych plikach.
+
+### `Makefile`
+
+- **Opis**: Plik Makefile.
+
+## Korzystanie z kompilatora
+
+- Skompiluj pliki za pomocą `make`.
+- Aby uruchomić kompilator `./kompilator <nazwa pliku wejściowego> <nazwa pliku wyjściowego>`
